@@ -1,10 +1,11 @@
 package forex.services.rates
 
 import cats.effect.Sync
-import forex.domain.Currency
+import forex.domain.{ Currency, Rate }
 import forex.domain.Currency.show
 import io.circe.generic.extras.decoding.{ EnumerationDecoder, UnwrappedDecoder }
 import io.circe.generic.extras.encoding.{ EnumerationEncoder, UnwrappedEncoder }
+import io.circe.generic.semiauto.deriveEncoder
 import io.circe.{ Decoder, Encoder }
 import org.http4s.{
   EntityDecoder,
@@ -36,4 +37,5 @@ package object interpreters {
   object ToQueryParam extends QueryParam[Currency] {
     override def key: QueryParameterKey = QueryParameterKey("to")
   }
+
 }

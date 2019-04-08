@@ -6,7 +6,6 @@ import forex.domain.Rate.Pair
 import forex.domain._
 import io.circe._
 import io.circe.generic.semiauto._
-import io.circe.java8.time._
 
 object Protocol {
 
@@ -22,6 +21,8 @@ object Protocol {
       timestamp: Timestamp
   )
 
+  final case class ForgeConvertRateResponse(value: Double, text: String, timestamp: Long)
+
   implicit val currencyEncoder: Encoder[Currency] =
     Encoder.instance[Currency] { show.show _ andThen Json.fromString }
 
@@ -33,5 +34,7 @@ object Protocol {
 
   implicit val responseEncoder: Encoder[GetApiResponse] =
     deriveEncoder[GetApiResponse]
+
+  implicit val forgeApiResponseEncoder: Decoder[ForgeConvertRateResponse] = deriveDecoder[ForgeConvertRateResponse]
 
 }
