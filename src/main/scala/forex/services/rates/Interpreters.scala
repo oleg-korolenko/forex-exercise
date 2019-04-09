@@ -1,9 +1,9 @@
 package forex.services.rates
 
-import cats.{ Applicative, Functor }
+import cats.Applicative
 import cats.effect.Sync
 import forex.config.OneForgeConfig
-import interpreters._
+import forex.services.rates.interpreters._
 import org.http4s.client.Client
 
 object Interpreters {

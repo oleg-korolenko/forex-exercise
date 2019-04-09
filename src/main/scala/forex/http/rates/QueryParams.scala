@@ -10,6 +10,9 @@ object QueryParams {
     QueryParamDecoder[String].map(Currency.fromString)
 
   object FromQueryParam extends QueryParamDecoderMatcher[Currency]("from")
+
   object ToQueryParam extends QueryParamDecoderMatcher[Currency]("to")
+
+  object QuantityQueryParam extends QueryParamDecoderMatcher[Int]("quantity")
 
 }

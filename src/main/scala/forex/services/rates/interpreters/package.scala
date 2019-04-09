@@ -1,21 +1,13 @@
 package forex.services.rates
 
 import cats.effect.Sync
-import forex.domain.{ Currency, Rate }
+import forex.domain.Currency
 import forex.domain.Currency.show
-import io.circe.generic.extras.decoding.{ EnumerationDecoder, UnwrappedDecoder }
-import io.circe.generic.extras.encoding.{ EnumerationEncoder, UnwrappedEncoder }
-import io.circe.generic.semiauto.deriveEncoder
-import io.circe.{ Decoder, Encoder }
-import org.http4s.{
-  EntityDecoder,
-  EntityEncoder,
-  QueryParam,
-  QueryParamEncoder,
-  QueryParameterKey,
-  QueryParameterValue
-}
+import io.circe.generic.extras.decoding.{EnumerationDecoder, UnwrappedDecoder}
+import io.circe.generic.extras.encoding.{EnumerationEncoder, UnwrappedEncoder}
+import io.circe.{Decoder, Encoder}
 import org.http4s.circe._
+import org.http4s.{EntityDecoder, EntityEncoder, QueryParam, QueryParamEncoder, QueryParameterKey, QueryParameterValue}
 
 package object interpreters {
 
@@ -31,11 +23,10 @@ package object interpreters {
   implicit val currencyQueryParam: QueryParamEncoder[Currency] =
     (value: Currency) => QueryParameterValue(show.show(value))
 
-  object FromQueryParam extends QueryParam[Currency] {
+  object ForgeFromQueryParam extends QueryParam[Currency] {
     override def key: QueryParameterKey = QueryParameterKey("from")
   }
-  object ToQueryParam extends QueryParam[Currency] {
+  object ForgeToQueryParam extends QueryParam[Currency] {
     override def key: QueryParameterKey = QueryParameterKey("to")
   }
-
 }

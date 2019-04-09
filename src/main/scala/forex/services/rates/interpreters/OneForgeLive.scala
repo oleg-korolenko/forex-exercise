@@ -5,10 +5,10 @@ import cats.effect.Sync
 import cats.implicits._
 import forex.config.OneForgeConfig
 import forex.domain.{Price, Rate, Timestamp}
-import forex.http.rates.Protocol.{ForgeConvertRateResponse, _}
+import forex.http.rates.Protocol.{ForgeConvertSuccessResponse, _}
 import forex.services.rates.Algebra
 import forex.services.rates.errors.Error
-import org.http4s.Status.{ClientError, ServerError}
+import org.http4s.Status.{ClientError, ServerError, Successful}
 import org.http4s.Uri
 import org.http4s.client.Client
 
@@ -20,43 +20,38 @@ class OneForgeLive[F[_]: Sync](config: OneForgeConfig, client: Client[F]) extend
 
   override def get(pair: Rate.Pair): F[Error Either Rate] = {
 
-    val uriToCall = baseUri +? ("from", pair.from) +? ("to", pair.to) +? ("api_key", config.apikey) +? ("quantit", 1)
+     val uriToCall = baseUri +? ("from", pair.from) +? ("to", pair.to) +? ("api_key", config.apikey) +? ("quantity", 1)
 
     client
       .get[Error Either Rate](uriToCall) {
-        case (resp) => {
+        case ClientError(resp) =>
+          val err: Error = Error.OneForgeLookupFailed(s"Client problem")
+          EitherT.left[Rate](err.pure[F]).value
+
+        case ServerError(resp) =>
+          val err: Error = Error.OneForgeLookupFailed(s"Server problem")
+          EitherT.left[Rate](err.pure[F]).value
+
+        case Successful(resp) =>
           resp
-            .as[ForgeConvertRateResponse]
+            .as[ForgeConvertSuccessResponse]
             .flatMap(
               r =>
                 EitherT.right[Error](Rate(pair, Price(r.value), Timestamp.fromUtcTimestamp(r.timestamp)).pure[F]).value
             )
-            // could be still an error thanks to the Forge API
-           .recoverWith {
+            // could be still an error thanks to the Forge API (f.i missing API key)
+            .recoverWith {
             case _ => resp.as[ForgeErrorMessageResponse]
               .flatMap(errMsg => {
                 val err: Error = Error.OneForgeLookupFailed(
-                  s"Couldn't parse  message : ${errMsg.message} for call : ${uriToCall.renderString}"
+                  s"Unknown error : ${errMsg.message}"
                 )
                 EitherT.left[Rate](err.pure[F]).value
               })
 
 
           }
-        }
-        case ClientError(resp) =>
-          val err: Error = Error.OneForgeLookupFailed(
-            s"Client problem: ${resp.toString} "
-          )
-          EitherT.left[Rate](err.pure[F]).value
-
-        case ServerError(resp) =>
-          val err: Error = Error.OneForgeLookupFailed(
-            s"Server problem: ${resp.toString}"
-          )
-          EitherT.left[Rate](err.pure[F]).value
-
-      }
+    }
 
   }
 
