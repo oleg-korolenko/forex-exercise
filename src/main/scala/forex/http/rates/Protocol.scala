@@ -22,6 +22,7 @@ object Protocol {
   )
 
   final case class ForgeConvertRateResponse(value: Double, text: String, timestamp: Long)
+  final case class ForgeErrorMessageResponse(error: Boolean, message: String)
 
   implicit val currencyEncoder: Encoder[Currency] =
     Encoder.instance[Currency] { show.show _ andThen Json.fromString }
@@ -36,5 +37,6 @@ object Protocol {
     deriveEncoder[GetApiResponse]
 
   implicit val forgeApiResponseEncoder: Decoder[ForgeConvertRateResponse] = deriveDecoder[ForgeConvertRateResponse]
+  implicit val forgeApiErrorResponseEncoder: Decoder[ForgeErrorMessageResponse] = deriveDecoder[ForgeErrorMessageResponse]
 
 }

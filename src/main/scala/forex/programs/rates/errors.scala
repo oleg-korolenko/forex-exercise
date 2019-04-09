@@ -10,6 +10,8 @@ object errors {
   }
 
   def toProgramError(error: RatesServiceError): Error = error match {
-    case RatesServiceError.OneForgeLookupFailed(msg) => Error.RateLookupFailed(msg)
+    case RatesServiceError.OneForgeLookupFailed(msg) => {
+      Error.RateLookupFailed(msg)
+    }
   }
 }
