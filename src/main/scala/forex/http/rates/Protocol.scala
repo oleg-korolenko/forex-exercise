@@ -37,12 +37,16 @@ object Protocol {
   implicit val responseEncoder: Encoder[GetApiResponse] =
     deriveEncoder[GetApiResponse]
 
-  implicit val forgeApiResponseEncoder: Decoder[ForgeConvertSuccessResponse] = deriveDecoder[ForgeConvertSuccessResponse]
+  implicit val forgeApiResponseEncoder: Decoder[ForgeConvertSuccessResponse] =
+    deriveDecoder[ForgeConvertSuccessResponse]
 
-  implicit val forgeApiErrorResponseDecoder: Decoder[ForgeErrorMessageResponse] = deriveDecoder[ForgeErrorMessageResponse]
+  implicit val forgeApiErrorResponseDecoder: Decoder[ForgeErrorMessageResponse] =
+    deriveDecoder[ForgeErrorMessageResponse]
 
-  implicit val forgeApiErrorResponseEncoder: Encoder[ForgeErrorMessageResponse] = deriveEncoder[ForgeErrorMessageResponse]
+  implicit val forgeApiErrorResponseEncoder: Encoder[ForgeErrorMessageResponse] =
+    deriveEncoder[ForgeErrorMessageResponse]
 
-  implicit val forgeApiConvertSuccessResponseEncoder: Encoder[ForgeConvertSuccessResponse] = deriveEncoder[ForgeConvertSuccessResponse]
+  implicit val forgeApiConvertSuccessResponseEncoder: Encoder[ForgeConvertSuccessResponse] =
+    deriveEncoder[ForgeConvertSuccessResponse]
 
 }

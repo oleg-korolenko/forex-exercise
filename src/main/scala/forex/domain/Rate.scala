@@ -6,6 +6,13 @@ case class Rate(
     timestamp: Timestamp
 )
 
+case class Quota(
+    quota_used: Int,
+    quota_limit: Int,
+    quota_remaining: Int,
+    hours_until_reset: Int
+)
+
 object Rate {
   final case class Pair(
       from: Currency,

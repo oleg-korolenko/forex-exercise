@@ -7,6 +7,8 @@ object errors {
   sealed trait Error extends Exception
   object Error {
     final case class RateLookupFailed(msg: String) extends Error
+    final case class QuotaLookupFailed(msg: String) extends Error
+    final case class QuotaLimit(msg: String) extends Error
   }
 // TODO handle differently depending on the type of error
   def toProgramError(error: RatesServiceError): Error = error match {
@@ -20,5 +22,7 @@ object errors {
       Error.RateLookupFailed(msg)
     case RatesServiceError.OneForgeLookupRateIsToolOld(msg) =>
       Error.RateLookupFailed(msg)
+    case RatesServiceError.OneForgeQuotaError(msg) =>
+      Error.QuotaLookupFailed(msg)
   }
 }

@@ -3,11 +3,18 @@ package forex.services.rates
 import cats.effect.Sync
 import forex.domain.Currency
 import forex.domain.Currency.show
-import io.circe.generic.extras.decoding.{EnumerationDecoder, UnwrappedDecoder}
-import io.circe.generic.extras.encoding.{EnumerationEncoder, UnwrappedEncoder}
-import io.circe.{Decoder, Encoder}
+import io.circe.generic.extras.decoding.{ EnumerationDecoder, UnwrappedDecoder }
+import io.circe.generic.extras.encoding.{ EnumerationEncoder, UnwrappedEncoder }
+import io.circe.{ Decoder, Encoder }
 import org.http4s.circe._
-import org.http4s.{EntityDecoder, EntityEncoder, QueryParam, QueryParamEncoder, QueryParameterKey, QueryParameterValue}
+import org.http4s.{
+  EntityDecoder,
+  EntityEncoder,
+  QueryParam,
+  QueryParamEncoder,
+  QueryParameterKey,
+  QueryParameterValue
+}
 
 package object interpreters {
 

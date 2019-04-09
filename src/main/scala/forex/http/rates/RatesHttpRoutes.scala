@@ -16,13 +16,13 @@ class RatesHttpRoutes[F[_]: Sync](rates: RatesProgram[F]) extends Http4sDsl[F] {
   private[http] val prefixPath = "/rates"
 
   private val httpRoutes: HttpRoutes[F] = HttpRoutes.of[F] {
-    case GET -> Root :? FromQueryParam(from)/*
+    case GET -> Root :? FromQueryParam(from) /*
     TODO to handle parsing errors
     => from.fold(
       parseFailures => BadRequest("unable to parse argument year"),
       year => Ok(getAverageTemperatureForYear(year))
     )
-    */ +& ToQueryParam(to) =>
+         */ +& ToQueryParam(to) =>
       rates.get(RatesProgramProtocol.GetRatesRequest(from, to)).flatMap(Sync[F].fromEither).flatMap { rate =>
         Ok(rate.asGetApiResponse)
       }
