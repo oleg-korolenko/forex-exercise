@@ -1,5 +1,7 @@
 package forex.services.rates.interpreters
 
+import java.time.OffsetDateTime
+
 import cats.effect.IO
 import forex.config.OneForgeConfig
 import forex.domain.{Currency, Price, Rate, Timestamp}
@@ -17,10 +19,10 @@ import org.scalatest.{FlatSpec, Matchers}
  */
 class OneForgeLiveTest extends FlatSpec with Matchers  with Http4sDsl[IO]{
 
-  val config =   OneForgeConfig("http://myservice","v1","secret")
+  val config =   OneForgeConfig("http://myservice","v1",5, "secret")
 
   val currencyPair =  Rate.Pair(Currency.USD, Currency.EUR)
-  val currentTs =  System.currentTimeMillis()
+  val currentTs =   OffsetDateTime.now.toEpochSecond
   val price = Price( 0.9d)
 
 
@@ -42,6 +44,25 @@ class OneForgeLiveTest extends FlatSpec with Matchers  with Http4sDsl[IO]{
    val expectedError = Error.OneForgeLookupUnknownError(s"$apiErrMsg")
    val forgeRateResponse = ForgeErrorMessageResponse(error = true, apiErrMsg)
    val forgeApi = prepareTestAPI( Ok(forgeRateResponse.asJson))
+    val result= new OneForgeLive[IO](config, Client.fromHttpApp[IO](forgeApi)).get(currencyPair).unsafeRunSync()
+
+    result.isLeft should be (true)
+    result.left.get should be (expectedError)
+  }
+
+  it should "return OneForgeLookupRateIsToolOld if Forge API returns a Rate older than defined threshold" in {
+    // ts older than NOW - THRESHOLD
+    val olderTs = currentTs -  config.oldRateThresholdInSecs - 5
+
+    val forgeRateResponse = ForgeConvertSuccessResponse(
+      price.value.doubleValue(),
+      "conversion text",
+      olderTs
+    )
+    val apiErrMsg = s"Rate is too old: ${Timestamp.fromUtcTimestamp(olderTs).value.toString}"
+    val expectedError = Error.OneForgeLookupRateIsToolOld(s"$apiErrMsg")
+
+    val forgeApi = prepareTestAPI( Ok(forgeRateResponse.asJson))
     val result= new OneForgeLive[IO](config, Client.fromHttpApp[IO](forgeApi)).get(currencyPair).unsafeRunSync()
 
     result.isLeft should be (true)

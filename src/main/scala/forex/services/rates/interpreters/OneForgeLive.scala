@@ -17,10 +17,11 @@ class OneForgeLive[F[_]: Sync](config: OneForgeConfig, client: Client[F]) extend
   // we can stop directly the server since this service will not work without the correct base URL
   // TODO  deal better with  failure
   private val baseUri = Uri.fromString(s"${config.host.show}/${config.version.show}/convert").toOption.get
-
+  private val isRateTooOld = Timestamp.isOlderThan(config.oldRateThresholdInSecs)
+  
   override def get(pair: Rate.Pair): F[Error Either Rate] = {
 
-     val uriToCall = baseUri +? ("from", pair.from) +? ("to", pair.to) +? ("api_key", config.apikey) +? ("quantity", 1)
+     val uriToCall = baseUri +? ("from", pair.from) +? ("to", pair.to) +? ("api_key", config.apiKey) +? ("quantity", 1)
 
     client
       .get[Error Either Rate](uriToCall) {
@@ -36,9 +37,13 @@ class OneForgeLive[F[_]: Sync](config: OneForgeConfig, client: Client[F]) extend
           resp
             .as[ForgeConvertSuccessResponse]
             .flatMap(
-              r =>
-                // TODO check for old rate 
-                EitherT.right[Error](Rate(pair, Price(r.value), Timestamp.fromUtcTimestamp(r.timestamp)).pure[F]).value
+              r =>{
+                val ts = Timestamp.fromUtcTimestamp(r.timestamp)
+                if(isRateTooOld(ts)){
+                  val err: Error = Error.OneForgeLookupRateIsToolOld(s"Rate is too old: ${ts.value.toString}")
+                  EitherT.left[Rate](err.pure[F]).value
+                } else    EitherT.right[Error](Rate(pair, Price(r.value), ts).pure[F]).value
+              }
             )
             // could be still an error thanks to the Forge API (f.i missing API key)
             .recoverWith {

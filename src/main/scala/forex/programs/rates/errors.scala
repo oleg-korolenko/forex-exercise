@@ -14,9 +14,9 @@ object errors {
       Error.RateLookupFailed(msg)
     case RatesServiceError.OneForgeLookupServerError(msg) =>
       Error.RateLookupFailed(msg)
-    case RatesServiceError.OneForgeLookupClientError(msg, uri) =>
+    case RatesServiceError.OneForgeLookupClientError(msg) =>
       Error.RateLookupFailed(msg)
-    case RatesServiceError.OneForgeLookupUnknownError(msg, uri) =>
+    case RatesServiceError.OneForgeLookupUnknownError(msg) =>
       Error.RateLookupFailed(msg)
     case RatesServiceError.OneForgeLookupRateIsToolOld(msg) =>
       Error.RateLookupFailed(msg)

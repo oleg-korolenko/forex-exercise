@@ -16,5 +16,6 @@ case class HttpConfig(
 case class OneForgeConfig(
     host: String,
     version: String,
-    apikey: String
+    oldRateThresholdInSecs: Int,
+    apiKey: String
 )
