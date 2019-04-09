@@ -8,7 +8,9 @@ import forex.domain.{ Price, Rate, Timestamp }
 import forex.http.rates.Protocol.{ ForgeConvertRateResponse, _ }
 import forex.services.rates.Algebra
 import forex.services.rates.errors.Error
-import org.http4s.Uri
+import io.circe.Json
+import org.http4s.Status.{ ClientError, ServerError, Successful }
+import org.http4s.{ Status, Uri }
 import org.http4s.client.Client
 
 class OneForgeLive[F[_]: Sync](config: OneForgeConfig, client: Client[F]) extends Algebra[F] {
@@ -18,14 +20,33 @@ class OneForgeLive[F[_]: Sync](config: OneForgeConfig, client: Client[F]) extend
   private val baseUri = Uri.fromString(s"${config.host.show}/${config.version.show}/convert").toOption.get
 
   override def get(pair: Rate.Pair): F[Error Either Rate] = {
+
     val uriToCall = baseUri +? ("from", pair.from) +? ("to", pair.to) +? ("api_key", config.apikey) +? ("quantity", 1)
 
-    val rate: F[Rate] = client
-      .get[ForgeConvertRateResponse](uriToCall)(_.as[ForgeConvertRateResponse])
-      // TODO replace by map , and deal with impl evidence collusion
-      .flatMap(r => Rate(pair, Price(r.value), Timestamp.fromUtcTimestamp(r.timestamp)).pure[F])
+    client
+      .get[Error Either Rate](uriToCall) {
+        case (resp) => {
+          resp
+            .as[ForgeConvertRateResponse]
+            .flatMap(
+              r =>
+                EitherT.right[Error](Rate(pair, Price(r.value), Timestamp.fromUtcTimestamp(r.timestamp)).pure[F]).value
+            )
+        }
+        case ClientError(_) =>
+          val err: Error = Error.OneForgeLookupFailed(
+            s"Client problem. Please check the correctness of your request  ${uriToCall.renderString}"
+          )
+          EitherT.left[Rate](err.pure[F]).value
 
-    EitherT.right[Error](rate).value
+        case ServerError(resp) =>
+          val err: Error = Error.OneForgeLookupFailed(
+            s"Unable to satisfy the request due to server problem: ${resp.toString}"
+          )
+          EitherT.left[Rate](err.pure[F]).value
+
+      }
+
   }
 
 }
