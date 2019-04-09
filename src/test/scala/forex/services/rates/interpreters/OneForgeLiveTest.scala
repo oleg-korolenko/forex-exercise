@@ -37,9 +37,9 @@ class OneForgeLiveTest extends FlatSpec with Matchers  with Http4sDsl[IO]{
     result.right.get should be (expectedRate)
   }
 
- it should "return Error if Forge API responds with 200 but with error in JSON" in {
+ it should "return OneForgeLookupUnknownError if Forge API responds with 200 but with error in JSON" in {
    val apiErrMsg = "API Key Not Valid. Please go to 1forge.com to get an API key"
-   val expectedError = Error.OneForgeLookupFailed(s"Unknown error : $apiErrMsg")
+   val expectedError = Error.OneForgeLookupUnknownError(s"$apiErrMsg")
    val forgeRateResponse = ForgeErrorMessageResponse(error = true, apiErrMsg)
    val forgeApi = prepareTestAPI( Ok(forgeRateResponse.asJson))
     val result= new OneForgeLive[IO](config, Client.fromHttpApp[IO](forgeApi)).get(currencyPair).unsafeRunSync()
@@ -48,8 +48,8 @@ class OneForgeLiveTest extends FlatSpec with Matchers  with Http4sDsl[IO]{
     result.left.get should be (expectedError)
   }
 
-  it should "return Error if Forge API returns one of server error codes" in {
-    val expectedError = Error.OneForgeLookupFailed("Server problem")
+  it should "return OneForgeLookupServerError if Forge API returns one of server error codes" in {
+    val expectedError = Error.OneForgeLookupServerError("Server problem")
     val forgeApi = prepareTestAPI(InternalServerError("something wrong"))
     val result = new OneForgeLive[IO](config, Client.fromHttpApp[IO](forgeApi)).get(currencyPair).unsafeRunSync()
 
@@ -57,8 +57,8 @@ class OneForgeLiveTest extends FlatSpec with Matchers  with Http4sDsl[IO]{
     result.left.get should be (expectedError)
   }
 
-  it should "return Error if Forge API returns one of client error codes" in {
-    val expectedError = Error.OneForgeLookupFailed("Client problem")
+  it should "return OneForgeLookupClientError if Forge API returns one of client error codes" in {
+    val expectedError = Error.OneForgeLookupClientError("Client problem")
     val forgeApi = prepareTestAPI( BadRequest("something wrong"))
     val result = new OneForgeLive[IO](config, Client.fromHttpApp[IO](forgeApi)).get(currencyPair).unsafeRunSync()
 
@@ -66,14 +66,6 @@ class OneForgeLiveTest extends FlatSpec with Matchers  with Http4sDsl[IO]{
     result.left.get should be (expectedError)
   }
 
-  it should "return OneForgeLookupUnknownError if Forge API returns unhandled error" in {
-    val expectedError = Error.OneForgeLookupFailed("Client problem")
-    val forgeApi = prepareTestAPI( BadRequest("something wrong"))
-    val result = new OneForgeLive[IO](config, Client.fromHttpApp[IO](forgeApi)).get(currencyPair).unsafeRunSync()
-
-    result.isLeft should be (true)
-    result.left.get should be (expectedError)
-  }
 
   private def prepareTestAPI  (response : IO[Response[IO]]) = HttpRoutes.of[IO] {
     case GET -> Root / config.version / "convert" :? FromQueryParam(currencyPair.from) +& ToQueryParam(currencyPair.to)  +& QuantityQueryParam(1)  => response

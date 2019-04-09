@@ -25,11 +25,11 @@ class OneForgeLive[F[_]: Sync](config: OneForgeConfig, client: Client[F]) extend
     client
       .get[Error Either Rate](uriToCall) {
         case ClientError(resp) =>
-          val err: Error = Error.OneForgeLookupFailed(s"Client problem")
+          val err: Error = Error.OneForgeLookupClientError(s"Client problem")
           EitherT.left[Rate](err.pure[F]).value
 
         case ServerError(resp) =>
-          val err: Error = Error.OneForgeLookupFailed(s"Server problem")
+          val err: Error = Error.OneForgeLookupServerError(s"Server problem")
           EitherT.left[Rate](err.pure[F]).value
 
         case Successful(resp) =>
@@ -37,15 +37,14 @@ class OneForgeLive[F[_]: Sync](config: OneForgeConfig, client: Client[F]) extend
             .as[ForgeConvertSuccessResponse]
             .flatMap(
               r =>
+                // TODO check for old rate 
                 EitherT.right[Error](Rate(pair, Price(r.value), Timestamp.fromUtcTimestamp(r.timestamp)).pure[F]).value
             )
             // could be still an error thanks to the Forge API (f.i missing API key)
             .recoverWith {
             case _ => resp.as[ForgeErrorMessageResponse]
               .flatMap(errMsg => {
-                val err: Error = Error.OneForgeLookupFailed(
-                  s"Unknown error : ${errMsg.message}"
-                )
+                val err: Error = Error.OneForgeLookupUnknownError(s"${errMsg.message}")
                 EitherT.left[Rate](err.pure[F]).value
               })
 
