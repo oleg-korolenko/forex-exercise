@@ -17,12 +17,12 @@ class OneForgeLive[F[_]: Sync](config: OneForgeConfig, client: Client[F]) extend
 
   // we can stop directly the server since this service will not work without the correct base URL
   // TODO  deal better with  failure
-  private val baseUri      = Uri.fromString(s"${config.host.show}/${config.version.show}/convert").toOption.get
+  private val baseUri      = Uri.fromString(s"${config.host.show}/${config.version.show}").toOption.get
   private val isRateTooOld = Timestamp.isOlderThan(config.oldRateThresholdInSecs)
 
   override def getRates(pair: Rate.Pair): F[Error Either Rate] = {
 
-    val uriToCall = baseUri +? ("from", pair.from) +? ("to", pair.to) +? ("api_key", config.apiKey) +? ("quantity", 1)
+    val uriToCall = baseUri / "convert" +? ("from", pair.from) +? ("to", pair.to) +? ("api_key", config.apiKey) +? ("quantity", 1)
 
     client
       .get[Error Either Rate](uriToCall) {
@@ -61,5 +61,34 @@ class OneForgeLive[F[_]: Sync](config: OneForgeConfig, client: Client[F]) extend
 
   }
 
-  override def getQuota: F[Either[Error, Quota]] = ???
+  override def getQuota: F[Either[Error, Quota]] = {
+    val uriToCall = baseUri / "quota" +? ("api_key", config.apiKey)
+
+    client
+      .get[Error Either Quota](uriToCall) {
+        case ClientError(_) =>
+          val err: Error = Error.OneForgeLookupClientError(s"Client problem")
+          EitherT.left[Quota](err.pure[F]).value
+
+        case ServerError(_) =>
+          val err: Error = Error.OneForgeLookupServerError(s"Server problem")
+          EitherT.left[Quota](err.pure[F]).value
+
+        case Successful(resp) =>
+          resp
+            .as[Quota]
+            .flatMap(quota => EitherT.right[Error](quota.pure[F]).value)
+            // could be still an error thanks to the Forge API (f.i missing API key)
+            .recoverWith {
+              case _ =>
+                resp
+                  .as[ForgeErrorMessageResponse]
+                  .flatMap(errMsg => {
+                    val err: Error = Error.OneForgeLookupUnknownError(s"${errMsg.message}")
+                    EitherT.left[Quota](err.pure[F]).value
+                  })
+
+            }
+      }
+  }
 }

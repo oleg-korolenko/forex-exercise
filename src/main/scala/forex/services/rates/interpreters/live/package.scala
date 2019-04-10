@@ -1,6 +1,6 @@
 package forex.services.rates.interpreters
 
-import forex.domain.Currency
+import forex.domain.{ Currency, Quota }
 import forex.domain.Currency.show
 import forex.services.rates.interpreters.live.Protocol.{ ForgeConvertSuccessResponse, ForgeErrorMessageResponse }
 import io.circe.{ Decoder, Encoder }
@@ -33,4 +33,10 @@ package object live {
 
   implicit val forgeApiConvertSuccessResponseEncoder: Encoder[ForgeConvertSuccessResponse] =
     deriveEncoder[ForgeConvertSuccessResponse]
+
+  implicit val quotaEncoder: Encoder[Quota] =
+    deriveEncoder[Quota]
+
+  implicit val quotaDecoder: Decoder[Quota] =
+    deriveDecoder[Quota]
 }
