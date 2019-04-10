@@ -105,7 +105,7 @@ class ProgramTest extends FlatSpec with Matchers {
 class RateServiceStubInterpreter[F[_]: Applicative](stubRate: F[Error Either Rate], stubQuota: F[Either[Error, Quota]])
     extends forex.services.rates.Algebra[F] {
 
-  override def get(pair: Rate.Pair): F[Error Either Rate] = stubRate
+  override def getRates(pair: Rate.Pair): F[Error Either Rate] = stubRate
 
   override def getQuota: F[Either[Error, Quota]] = stubQuota
 }

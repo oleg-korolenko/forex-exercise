@@ -18,7 +18,7 @@ class Program[F[_]: Sync](
       quota <- EitherT(ratesService.getQuota).leftMap(toProgramError)
 
       rateOrError <- if (quota.quota_remaining > 0)
-                      EitherT(ratesService.get(Rate.Pair(request.from, request.to))).leftMap(toProgramError)
+                      EitherT(ratesService.getRates(Rate.Pair(request.from, request.to))).leftMap(toProgramError)
                     else {
                       val quotaLimitError: errors.Error =
                         errors.Error.QuotaLimit(s"No quota left, please wait for ${quota.hours_until_reset} hours")

@@ -19,7 +19,7 @@ class OneForgeLive[F[_]: Sync](config: OneForgeConfig, client: Client[F]) extend
   private val baseUri      = Uri.fromString(s"${config.host.show}/${config.version.show}/convert").toOption.get
   private val isRateTooOld = Timestamp.isOlderThan(config.oldRateThresholdInSecs)
 
-  override def get(pair: Rate.Pair): F[Error Either Rate] = {
+  override def getRates(pair: Rate.Pair): F[Error Either Rate] = {
 
     val uriToCall = baseUri +? ("from", pair.from) +? ("to", pair.to) +? ("api_key", config.apiKey) +? ("quantity", 1)
 
