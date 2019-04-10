@@ -1,13 +1,13 @@
-package forex.services.rates.interpreters
+package forex.services.rates.interpreters.live
 
 import java.time.OffsetDateTime
 
 import cats.effect.IO
 import forex.config.OneForgeConfig
 import forex.domain.{ Currency, Price, Rate, Timestamp }
-import forex.http.rates.Protocol._
 import forex.http.rates.QueryParams.{ FromQueryParam, QuantityQueryParam, ToQueryParam }
 import forex.services.rates.errors.Error
+import forex.services.rates.interpreters.live.Protocol.{ ForgeConvertSuccessResponse, ForgeErrorMessageResponse }
 import io.circe.syntax._
 import org.http4s.client.Client
 import org.http4s.dsl.Http4sDsl

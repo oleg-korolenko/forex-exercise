@@ -1,13 +1,14 @@
-package forex.services.rates.interpreters
+package forex.services.rates.interpreters.live
 
 import cats.data.EitherT
 import cats.effect.Sync
 import cats.implicits._
 import forex.config.OneForgeConfig
 import forex.domain.{ Price, Quota, Rate, Timestamp }
-import forex.http.rates.Protocol.{ ForgeConvertSuccessResponse, _ }
 import forex.services.rates.Algebra
 import forex.services.rates.errors.Error
+import forex.services.rates.interpreters._
+import forex.services.rates.interpreters.live.Protocol.{ ForgeConvertSuccessResponse, ForgeErrorMessageResponse }
 import org.http4s.Status.{ ClientError, ServerError, Successful }
 import org.http4s.Uri
 import org.http4s.client.Client
