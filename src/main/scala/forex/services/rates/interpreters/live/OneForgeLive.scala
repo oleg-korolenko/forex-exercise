@@ -9,7 +9,7 @@ import forex.services.rates.Algebra
 import forex.services.rates.errors.Error
 import forex.services.rates.interpreters._
 import forex.services.rates.interpreters.live.Protocol.{ ForgeConvertSuccessResponse, ForgeErrorMessageResponse }
-import org.http4s.Status.{ ClientError, ServerError, Successful }
+import org.http4s.Status.Successful
 import org.http4s.Uri
 import org.http4s.client.Client
 
@@ -26,14 +26,6 @@ class OneForgeLive[F[_]: Sync](config: OneForgeConfig, client: Client[F]) extend
 
     client
       .get[Error Either Rate](uriToCall) {
-        case ClientError(resp) =>
-          val err: Error = Error.OneForgeLookupClientError(s"Client problem")
-          EitherT.left[Rate](err.pure[F]).value
-
-        case ServerError(resp) =>
-          val err: Error = Error.OneForgeLookupServerError(s"Server problem")
-          EitherT.left[Rate](err.pure[F]).value
-
         case Successful(resp) =>
           resp
             .as[ForgeConvertSuccessResponse]
@@ -51,12 +43,15 @@ class OneForgeLive[F[_]: Sync](config: OneForgeConfig, client: Client[F]) extend
               case _ =>
                 resp
                   .as[ForgeErrorMessageResponse]
-                  .flatMap(errMsg => {
-                    val err: Error = Error.OneForgeLookupUnknownError(s"${errMsg.message}")
+                  .flatMap(_ => {
+                    val err: Error = Error.OneForgeLookupRateError("Unable to retrieve rate", resp.status.code)
                     EitherT.left[Rate](err.pure[F]).value
                   })
 
             }
+        case resp =>
+          val err: Error = Error.OneForgeLookupRateError("Unable to retrieve rate", resp.status.code)
+          EitherT.left[Rate](err.pure[F]).value
       }
 
   }
@@ -66,13 +61,6 @@ class OneForgeLive[F[_]: Sync](config: OneForgeConfig, client: Client[F]) extend
 
     client
       .get[Error Either Quota](uriToCall) {
-        case ClientError(_) =>
-          val err: Error = Error.OneForgeLookupClientError(s"Client problem")
-          EitherT.left[Quota](err.pure[F]).value
-
-        case ServerError(_) =>
-          val err: Error = Error.OneForgeLookupServerError(s"Server problem")
-          EitherT.left[Quota](err.pure[F]).value
 
         case Successful(resp) =>
           resp
@@ -84,11 +72,15 @@ class OneForgeLive[F[_]: Sync](config: OneForgeConfig, client: Client[F]) extend
                 resp
                   .as[ForgeErrorMessageResponse]
                   .flatMap(errMsg => {
-                    val err: Error = Error.OneForgeLookupUnknownError(s"${errMsg.message}")
+                    val err: Error =
+                      Error.OneForgeQuotaError("Unable to retrieve quota", 200)
                     EitherT.left[Quota](err.pure[F]).value
                   })
 
             }
+        case resp =>
+          val err: Error = Error.OneForgeQuotaError("Unable to retrieve quota", resp.status.code)
+          EitherT.left[Quota](err.pure[F]).value
       }
   }
 }
