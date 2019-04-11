@@ -17,20 +17,26 @@ class RatesHttpRoutes[F[_]: Sync](rates: RatesProgram[F]) extends Http4sDsl[F] {
   private[http] val prefixPath = "/rates"
 
   private val httpRoutes: HttpRoutes[F] = HttpRoutes.of[F] {
-    case GET -> Root :? FromQueryParam(from) +& ToQueryParam(to) =>
-      rates
-        .get(RatesProgramProtocol.GetRatesRequest(from, to))
-        //.flatMap(Sync[F].fromEither)
-        .flatMap {
-          case Right(rate) => Ok(rate.asGetApiResponse)
-          case Left(err) =>
-            err match {
-              case RateLookupFailed(_) | QuotaLookupFailed(_) => InternalServerError(err.asGetApiError)
-              case QuotaLimit(_)                              => Forbidden(err.asGetApiError)
-              case RateIsTooOldLookupFailed(_)                => Accepted(err.asGetApiError)
-            }
-        }
-
+    case GET -> Root :? FromQueryParam(fromValidated) +& ToQueryParam(toValidated) =>
+      fromValidated.fold(
+        _ => BadRequest("Unable to parse argument [from]"),
+        from =>
+          toValidated.fold(
+            _ => BadRequest("Unable to parse argument [to]"),
+            to =>
+              rates
+                .get(RatesProgramProtocol.GetRatesRequest(from, to))
+                .flatMap {
+                  case Right(rate) => Ok(rate.asGetApiResponse)
+                  case Left(err) =>
+                    err match {
+                      case RateLookupFailed(_) | QuotaLookupFailed(_) => InternalServerError(err.asGetApiError)
+                      case QuotaLimit(_)                              => Forbidden(err.asGetApiError)
+                      case RateIsTooOldLookupFailed(_)                => Accepted(err.asGetApiError)
+                    }
+              }
+        )
+      )
   }
 
   val routes: HttpRoutes[F] = Router(

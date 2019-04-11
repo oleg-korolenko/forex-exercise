@@ -100,9 +100,9 @@ class OneForgeRatesLiveTest extends FlatSpec with Matchers with Http4sDsl[IO] {
   private def stubForgeGetRateAPI(currencyPair: Rate.Pair, response: IO[Response[IO]]) =
     HttpRoutes
       .of[IO] {
-        case GET -> Root / config.version / "convert" :? FromQueryParam(currencyPair.from) +& ToQueryParam(
-              currencyPair.to
-            ) +& QuantityQueryParam(1) =>
+        case GET -> Root / config.version / "convert" :? FromQueryParam(_) +& ToQueryParam(_) +& QuantityQueryParam(
+              _
+            ) =>
           response
       }
       .orNotFound

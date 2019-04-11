@@ -18,7 +18,7 @@ object errors {
   def rateErrorToProgramError(error: RatesServiceError): Error = error match {
 
     case RatesServiceError.OneForgeLookupRateError(msg, _) =>
-      Error.RateLookupFailed("Failed to get the rate due to an error")
+      Error.RateLookupFailed(msg)
 
     case RatesServiceError.OneForgeLookupRateIsToolOld(msg) =>
       Error.RateIsTooOldLookupFailed(msg)

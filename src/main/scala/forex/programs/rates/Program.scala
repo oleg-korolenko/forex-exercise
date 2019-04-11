@@ -13,8 +13,6 @@ class Program[F[_]: Sync](
 ) extends Algebra[F] {
 
   override def get(request: Protocol.GetRatesRequest): F[Error Either Rate] = {
-
-//(s"No quota left, please wait for ${quota.hours_until_reset} hours"
     val rateOrError = for {
       quota <- EitherT(quotaService.getQuota).leftMap(quotaErrorToProgramError)
 
