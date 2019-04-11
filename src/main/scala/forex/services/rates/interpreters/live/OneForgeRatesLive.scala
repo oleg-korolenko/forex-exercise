@@ -17,7 +17,6 @@ class OneForgeRatesLive[F[_]: Sync](config: OneForgeConfig, client: Client[F]) e
   // we can stop directly the server since this service will not work without the correct base URL
   private val baseUri      = Uri.fromString(s"${config.host.show}/${config.version.show}").toOption.get
   private val isRateTooOld = Timestamp.isOlderThan(config.oldRateThresholdInSecs)
-
   override def getRates(pair: Rate.Pair): F[RateError Either Rate] = {
 
     val uriToCall = baseUri / "convert" +? ("from", pair.from) +? ("to", pair.to) +? ("api_key", config.apiKey) +? ("quantity", 1)

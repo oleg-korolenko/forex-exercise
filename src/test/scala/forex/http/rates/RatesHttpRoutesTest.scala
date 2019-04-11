@@ -54,9 +54,9 @@ class RatesHttpRoutesTest extends FlatSpec with Matchers with Http4sDsl[IO] {
       Request(method = Method.GET, uri = Uri.uri("/rates?from=UUU&to=EUR"))
     )
 
-    val expectedMessage = "Unable to parse argument [from]"
+    val expectedMessage = "Unable to parse argument [from]".asJson
 
-    check[String](response, Status.BadRequest, Some(expectedMessage))
+    check[Json](response, Status.BadRequest, Some(expectedMessage))
   }
 
   it should "return 400  if 'to'  param can't be parsed to currency" in {
@@ -72,9 +72,9 @@ class RatesHttpRoutesTest extends FlatSpec with Matchers with Http4sDsl[IO] {
       Request(method = Method.GET, uri = Uri.uri("/rates?from=USD&to=EU"))
     )
 
-    val expectedMsg = "Unable to parse argument [to]"
+    val expectedMsg = "Unable to parse argument [to]".asJson
 
-    check[String](response, Status.BadRequest, Some(expectedMsg))
+    check[Json](response, Status.BadRequest, Some(expectedMsg))
   }
 
   it should "return 500  if RatesProgram fails to get the rate" in {
