@@ -2,7 +2,6 @@ package forex.services.rates
 
 import cats.effect.Sync
 import forex.config.OneForgeConfig
-import forex.services.rates.interpreters._
 import forex.services.rates.interpreters.dummy.OneForgeRateDummy
 import forex.services.rates.interpreters.live.OneForgeRatesLive
 import org.http4s.client.Client

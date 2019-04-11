@@ -1,10 +1,10 @@
 package forex.services.rates.interpreters
 
-import forex.domain.{ Currency, Quota }
+import forex.domain.Currency
 import forex.domain.Currency.show
 import forex.services.rates.interpreters.live.Protocol.{ ForgeRateErrorResponse, ForgeRateSuccessResponse }
-import io.circe.{ Decoder, Encoder }
 import io.circe.generic.semiauto.{ deriveDecoder, deriveEncoder }
+import io.circe.{ Decoder, Encoder }
 import org.http4s.{ QueryParam, QueryParamEncoder, QueryParameterKey, QueryParameterValue }
 
 /**
