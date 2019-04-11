@@ -13,8 +13,9 @@ import org.http4s.server.middleware.{ AutoSlash, Timeout }
 class Module[F[_]: Concurrent: Timer](config: ApplicationConfig, client: Client[F]) {
 
   private val ratesService: RatesService[F] = RatesServices.live[F](config.forge, client)
+  private val quotaService: QuotaService[F] = QuotaServices.live[F](config.forge, client)
 
-  private val ratesProgram: RatesProgram[F] = RatesProgram[F](ratesService)
+  private val ratesProgram: RatesProgram[F] = RatesProgram[F](ratesService, quotaService)
 
   private val ratesHttpRoutes: HttpRoutes[F] = new RatesHttpRoutes[F](ratesProgram).routes
 

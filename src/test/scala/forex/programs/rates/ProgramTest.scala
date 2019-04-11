@@ -6,7 +6,9 @@ import cats.syntax.applicative._
 import cats.syntax.either._
 import forex.domain._
 import forex.programs.rates.Protocol.GetRatesRequest
-import forex.services.rates.errors.{ CauseError, Error }
+import forex.services.errors.CauseError
+import forex.services.quota.errors.QuotaError
+import forex.services.rates.errors._
 import org.scalatest.{ FlatSpec, Matchers }
 
 /**
@@ -19,11 +21,12 @@ class ProgramTest extends FlatSpec with Matchers {
     val pair = Rate.Pair(Currency.USD, Currency.EUR)
     val now  = Timestamp.now
 
-    val stubRateResp  = Rate(pair, Price(BigDecimal(100)), now).asRight[Error].pure[IO]
-    val stubQuotaResp = Quota(100, 1000, 900, 10).asRight[Error].pure[IO]
+    val stubRateResp  = Rate(pair, Price(BigDecimal(100)), now).asRight[RateError].pure[IO]
+    val stubQuotaResp = Quota(100, 1000, 900, 10).asRight[QuotaError].pure[IO]
 
-    val ratesService = createRatesServicesInterpreter(stubRateResp, stubQuotaResp)
-    val program      = Program[IO](ratesService)
+    val ratesService = createRatesServicesInterpreter(stubRateResp)
+    val quotaService = createQuotaServicesInterpreter(stubQuotaResp)
+    val program      = Program[IO](ratesService, quotaService)
 
     val result = program.get(GetRatesRequest(pair.from, pair.to)).unsafeRunSync()
 
@@ -38,14 +41,15 @@ class ProgramTest extends FlatSpec with Matchers {
 
     val pair                 = Rate.Pair(Currency.USD, Currency.EUR)
     val errMessage           = "Can't get Rate"
-    val rateServiceError     = Error.OneForgeLookupRateError("Unable to retrieve rate", CauseError(errMessage, 500))
-    val expectedProgramError = errors.toProgramError(rateServiceError)
+    val rateServiceError     = RateError.OneForgeLookupRateError("Unable to retrieve rate", CauseError(errMessage, 500))
+    val expectedProgramError = errors.rateErrorToProgramError(rateServiceError)
 
-    val stubQuotaResp = Quota(100, 1000, 900, 10).asRight[Error].pure[IO]
+    val stubQuotaResp = Quota(100, 1000, 900, 10).asRight[QuotaError].pure[IO]
     val stubRateResp  = rateServiceError.asLeft[Rate].pure[IO]
 
-    val ratesService = createRatesServicesInterpreter(stubRateResp, stubQuotaResp)
-    val program      = Program[IO](ratesService)
+    val ratesService = createRatesServicesInterpreter(stubRateResp)
+    val quotaService = createQuotaServicesInterpreter(stubQuotaResp)
+    val program      = Program[IO](ratesService, quotaService)
 
     val result = program.get(GetRatesRequest(pair.from, pair.to)).unsafeRunSync()
 
@@ -59,14 +63,16 @@ class ProgramTest extends FlatSpec with Matchers {
     val pair = Rate.Pair(Currency.USD, Currency.EUR)
     val now  = Timestamp.now
 
-    val rateServiceQuotaError = Error.OneForgeQuotaError("Unable to retrieve quota", CauseError("something wrong", 500))
-    val expectedProgramError  = errors.toProgramError(rateServiceQuotaError)
+    val quotaError =
+      QuotaError.OneForgeQuotaError("Unable to retrieve quota", CauseError("something wrong", 500))
+    val expectedProgramError = errors.quotaErrorToProgramError(quotaError)
 
-    val stubQuotaResp = rateServiceQuotaError.asLeft[Quota].pure[IO]
-    val stubRateResp  = Rate(pair, Price(BigDecimal(100)), now).asRight[Error].pure[IO]
+    val stubQuotaResp = quotaError.asLeft[Quota].pure[IO]
+    val stubRateResp  = Rate(pair, Price(BigDecimal(100)), now).asRight[RateError].pure[IO]
 
-    val ratesService = createRatesServicesInterpreter(stubRateResp, stubQuotaResp)
-    val program      = Program[IO](ratesService)
+    val ratesService = createRatesServicesInterpreter(stubRateResp)
+    val quotaService = createQuotaServicesInterpreter(stubQuotaResp)
+    val program      = Program[IO](ratesService, quotaService)
 
     val result = program.get(GetRatesRequest(pair.from, pair.to)).unsafeRunSync()
 
@@ -84,11 +90,12 @@ class ProgramTest extends FlatSpec with Matchers {
     val expectedProgramError =
       errors.Error.QuotaLimit(s"No quota left, please wait for ${quota.hours_until_reset} hours")
 
-    val stubQuotaResp = quota.asRight[Error].pure[IO]
-    val stubRateResp  = Rate(pair, Price(BigDecimal(100)), now).asRight[Error].pure[IO]
+    val stubQuotaResp = quota.asRight[QuotaError].pure[IO]
+    val stubRateResp  = Rate(pair, Price(BigDecimal(100)), now).asRight[RateError].pure[IO]
 
-    val ratesService = createRatesServicesInterpreter(stubRateResp, stubQuotaResp)
-    val program      = Program[IO](ratesService)
+    val ratesService = createRatesServicesInterpreter(stubRateResp)
+    val quotaService = createQuotaServicesInterpreter(stubQuotaResp)
+    val program      = Program[IO](ratesService, quotaService)
 
     val result = program.get(GetRatesRequest(pair.from, pair.to)).unsafeRunSync()
 
@@ -96,16 +103,22 @@ class ProgramTest extends FlatSpec with Matchers {
     result.left.get should be(expectedProgramError)
   }
 
-  private def createRatesServicesInterpreter(stubRateResp: IO[Error Either Rate],
-                                             stubQuotaResp: IO[Either[Error, Quota]]) =
-    new RateServiceStubInterpreter[IO](stubRateResp, stubQuotaResp)
+  private def createRatesServicesInterpreter(stubRateResp: IO[RateError Either Rate]) =
+    new RateServiceStubInterpreter[IO](stubRateResp)
+
+  private def createQuotaServicesInterpreter(stubQuotaResp: IO[Either[QuotaError, Quota]]) =
+    new QuotaServiceStubInterpreter[IO](stubQuotaResp)
 
 }
 
-class RateServiceStubInterpreter[F[_]: Applicative](stubRate: F[Error Either Rate], stubQuota: F[Either[Error, Quota]])
+class RateServiceStubInterpreter[F[_]: Applicative](stubRate: F[RateError Either Rate])
     extends forex.services.rates.Algebra[F] {
 
-  override def getRates(pair: Rate.Pair): F[Error Either Rate] = stubRate
+  override def getRates(pair: Rate.Pair): F[RateError Either Rate] = stubRate
 
-  override def getQuota: F[Either[Error, Quota]] = stubQuota
+}
+class QuotaServiceStubInterpreter[F[_]: Applicative](stubQuota: F[Either[QuotaError, Quota]])
+    extends forex.services.quota.Algebra[F] {
+
+  override def getQuota: F[Either[QuotaError, Quota]] = stubQuota
 }

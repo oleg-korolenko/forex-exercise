@@ -1,6 +1,7 @@
 package forex.programs.rates
 
-import forex.services.rates.errors.{ Error => RatesServiceError }
+import forex.services.rates.errors.{ RateError => RatesServiceError }
+import forex.services.quota.errors.{ QuotaError => QuotaServiceError }
 
 object errors {
 
@@ -14,7 +15,7 @@ object errors {
     final case class QuotaLimit(msg: String) extends Error
   }
 
-  def toProgramError(error: RatesServiceError): Error = error match {
+  def rateErrorToProgramError(error: RatesServiceError): Error = error match {
 
     case RatesServiceError.OneForgeLookupRateError(msg, _) =>
       Error.RateLookupFailed("Failed to get the rate due to an error")
@@ -22,7 +23,9 @@ object errors {
     case RatesServiceError.OneForgeLookupRateIsToolOld(msg) =>
       Error.RateIsTooOldLookupFailed(msg)
 
-    case RatesServiceError.OneForgeQuotaError(msg, _) =>
+  }
+  def quotaErrorToProgramError(error: QuotaServiceError): Error = error match {
+    case QuotaServiceError.OneForgeQuotaError(msg, _) =>
       Error.QuotaLookupFailed(msg)
 
   }

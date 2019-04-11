@@ -1,4 +1,4 @@
-package forex.services.rates.interpreters.live
+package forex.services.quota
 
 object Protocol {
   final case class ForgeRateSuccessResponse(value: Double, text: String, timestamp: Long)

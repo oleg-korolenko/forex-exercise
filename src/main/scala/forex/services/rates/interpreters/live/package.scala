@@ -2,7 +2,7 @@ package forex.services.rates.interpreters
 
 import forex.domain.{ Currency, Quota }
 import forex.domain.Currency.show
-import forex.services.rates.interpreters.live.Protocol.{ ForgeConvertSuccessResponse, ForgeErrorMessageResponse }
+import forex.services.rates.interpreters.live.Protocol.{ ForgeRateErrorResponse, ForgeRateSuccessResponse }
 import io.circe.{ Decoder, Encoder }
 import io.circe.generic.semiauto.{ deriveDecoder, deriveEncoder }
 import org.http4s.{ QueryParam, QueryParamEncoder, QueryParameterKey, QueryParameterValue }
@@ -22,21 +22,16 @@ package object live {
     override def key: QueryParameterKey = QueryParameterKey("to")
   }
 
-  implicit val forgeApiResponseEncoder: Decoder[ForgeConvertSuccessResponse] =
-    deriveDecoder[ForgeConvertSuccessResponse]
+  implicit val forgeApiConvertSuccessResponseEncoder: Encoder[ForgeRateSuccessResponse] =
+    deriveEncoder[ForgeRateSuccessResponse]
 
-  implicit val forgeApiErrorResponseDecoder: Decoder[ForgeErrorMessageResponse] =
-    deriveDecoder[ForgeErrorMessageResponse]
+  implicit val forgeApiResponseEncoder: Decoder[ForgeRateSuccessResponse] =
+    deriveDecoder[ForgeRateSuccessResponse]
 
-  implicit val forgeApiErrorResponseEncoder: Encoder[ForgeErrorMessageResponse] =
-    deriveEncoder[ForgeErrorMessageResponse]
+  implicit val forgeApiErrorResponseDecoder: Decoder[ForgeRateErrorResponse] =
+    deriveDecoder[ForgeRateErrorResponse]
 
-  implicit val forgeApiConvertSuccessResponseEncoder: Encoder[ForgeConvertSuccessResponse] =
-    deriveEncoder[ForgeConvertSuccessResponse]
+  implicit val forgeApiErrorResponseEncoder: Encoder[ForgeRateErrorResponse] =
+    deriveEncoder[ForgeRateErrorResponse]
 
-  implicit val quotaEncoder: Encoder[Quota] =
-    deriveEncoder[Quota]
-
-  implicit val quotaDecoder: Decoder[Quota] =
-    deriveDecoder[Quota]
 }
