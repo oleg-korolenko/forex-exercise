@@ -9,6 +9,7 @@ import org.http4s._
 import org.http4s.client.Client
 import org.http4s.implicits._
 import org.http4s.server.middleware.{ AutoSlash, Timeout }
+import org.http4s.server.middleware.Logger
 
 class Module[F[_]: Concurrent: Timer](config: ApplicationConfig, client: Client[F]) {
 
@@ -34,6 +35,6 @@ class Module[F[_]: Concurrent: Timer](config: ApplicationConfig, client: Client[
 
   private val http: HttpRoutes[F] = ratesHttpRoutes
 
-  val httpApp: HttpApp[F] = appMiddleware(routesMiddleware(http).orNotFound)
+  val httpApp: HttpApp[F] = Logger(logBody = true, logHeaders = true)(appMiddleware(routesMiddleware(http).orNotFound))
 
 }
