@@ -1,12 +1,11 @@
 package forex.services.rates.interpreters.live
 
-import cats.data.EitherT
 import cats.effect.Sync
 import cats.implicits._
 import forex.config.OneForgeConfig
 import forex.domain.{ Price, Quota, Rate, Timestamp }
 import forex.services.rates.Algebra
-import forex.services.rates.errors.Error
+import forex.services.rates.errors.{ CauseError, Error }
 import forex.services.rates.interpreters._
 import forex.services.rates.interpreters.live.Protocol.{ ForgeConvertSuccessResponse, ForgeErrorMessageResponse }
 import org.http4s.Status.Successful
@@ -16,7 +15,6 @@ import org.http4s.client.Client
 class OneForgeLive[F[_]: Sync](config: OneForgeConfig, client: Client[F]) extends Algebra[F] {
 
   // we can stop directly the server since this service will not work without the correct base URL
-  // TODO  deal better with  failure
   private val baseUri      = Uri.fromString(s"${config.host.show}/${config.version.show}").toOption.get
   private val isRateTooOld = Timestamp.isOlderThan(config.oldRateThresholdInSecs)
 
@@ -34,8 +32,8 @@ class OneForgeLive[F[_]: Sync](config: OneForgeConfig, client: Client[F]) extend
                 val ts = Timestamp.fromUtcTimestamp(r.timestamp)
                 if (isRateTooOld(ts)) {
                   val err: Error = Error.OneForgeLookupRateIsToolOld(s"Rate is too old: ${ts.value.toString}")
-                  EitherT.left[Rate](err.pure[F]).value
-                } else EitherT.right[Error](Rate(pair, Price(r.value), ts).pure[F]).value
+                  err.asLeft[Rate].pure[F]
+                } else Rate(pair, Price(r.value), ts).asRight[Error].pure[F]
               }
             )
             // could be still an error thanks to the Forge API (f.i missing API key)
@@ -43,15 +41,23 @@ class OneForgeLive[F[_]: Sync](config: OneForgeConfig, client: Client[F]) extend
               case _ =>
                 resp
                   .as[ForgeErrorMessageResponse]
-                  .flatMap(_ => {
-                    val err: Error = Error.OneForgeLookupRateError("Unable to retrieve rate", resp.status.code)
-                    EitherT.left[Rate](err.pure[F]).value
+                  .flatMap(errResp => {
+                    val err: Error = Error.OneForgeLookupRateError(
+                      "Unable to retrieve rate",
+                      CauseError(errResp.message, resp.status.code)
+                    )
+                    err.asLeft[Rate].pure[F]
                   })
 
             }
         case resp =>
-          val err: Error = Error.OneForgeLookupRateError("Unable to retrieve rate", resp.status.code)
-          EitherT.left[Rate](err.pure[F]).value
+          resp
+            .as[String]
+            .map(cause => {
+              val err: Error =
+                Error.OneForgeLookupRateError("Unable to retrieve rate", CauseError(cause, resp.status.code))
+              err.asLeft[Rate]
+            })
       }
 
   }
@@ -65,22 +71,26 @@ class OneForgeLive[F[_]: Sync](config: OneForgeConfig, client: Client[F]) extend
         case Successful(resp) =>
           resp
             .as[Quota]
-            .flatMap(quota => EitherT.right[Error](quota.pure[F]).value)
+            .flatMap(_.asRight[Error].pure[F])
             // could be still an error thanks to the Forge API (f.i missing API key)
             .recoverWith {
               case _ =>
                 resp
                   .as[ForgeErrorMessageResponse]
-                  .flatMap(errMsg => {
+                  .flatMap(errResp => {
                     val err: Error =
-                      Error.OneForgeQuotaError("Unable to retrieve quota", 200)
-                    EitherT.left[Quota](err.pure[F]).value
+                      Error.OneForgeQuotaError("Unable to retrieve quota", CauseError(errResp.message, 200))
+                    err.asLeft[Quota].pure[F]
                   })
 
             }
         case resp =>
-          val err: Error = Error.OneForgeQuotaError("Unable to retrieve quota", resp.status.code)
-          EitherT.left[Quota](err.pure[F]).value
+          resp
+            .as[String]
+            .map(cause => {
+              val err: Error = Error.OneForgeQuotaError("Unable to retrieve quota", CauseError(cause, resp.status.code))
+              err.asLeft[Quota]
+            })
       }
   }
 }

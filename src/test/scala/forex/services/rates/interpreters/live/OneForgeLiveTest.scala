@@ -6,7 +6,7 @@ import cats.effect.IO
 import forex.config.OneForgeConfig
 import forex.domain._
 import forex.http.rates.QueryParams.{ FromQueryParam, QuantityQueryParam, ToQueryParam }
-import forex.services.rates.errors.Error
+import forex.services.rates.errors.{ CauseError, Error }
 import forex.services.rates.interpreters._
 import forex.services.rates.interpreters.live.Protocol.{ ForgeConvertSuccessResponse, ForgeErrorMessageResponse }
 import io.circe.syntax._
@@ -42,7 +42,7 @@ class OneForgeLiveTest extends FlatSpec with Matchers with Http4sDsl[IO] {
 
   it should "return OneForgeLookupUnknownError if Forge API responds with 200 but with error in JSON" in {
     val apiErrMsg         = "API Key Not Valid. Please go to 1forge.com to get an API key"
-    val expectedError     = Error.OneForgeLookupRateError("Unable to retrieve rate", 200)
+    val expectedError     = Error.OneForgeLookupRateError("Unable to retrieve rate", CauseError(apiErrMsg, 200))
     val forgeRateResponse = ForgeErrorMessageResponse(error = true, apiErrMsg)
     val forgeApi          = stubForgeGetRateAPI(currencyPair, Ok(forgeRateResponse.asJson))
     val result            = new OneForgeLive[IO](config, Client.fromHttpApp[IO](forgeApi)).getRates(currencyPair).unsafeRunSync()
@@ -64,7 +64,7 @@ class OneForgeLiveTest extends FlatSpec with Matchers with Http4sDsl[IO] {
       olderTs
     )
     val apiErrMsg     = s"Rate is too old: ${Timestamp.fromUtcTimestamp(olderTs).value.toString}"
-    val expectedError = Error.OneForgeLookupRateIsToolOld(s"$apiErrMsg")
+    val expectedError = Error.OneForgeLookupRateIsToolOld(apiErrMsg)
 
     val forgeApi = stubForgeGetRateAPI(currencyPair, Ok(forgeRateResponse.asJson))
     val result   = new OneForgeLive[IO](config, Client.fromHttpApp[IO](forgeApi)).getRates(currencyPair).unsafeRunSync()
@@ -74,7 +74,7 @@ class OneForgeLiveTest extends FlatSpec with Matchers with Http4sDsl[IO] {
   }
 
   it should "return OneForgeLookupServerError if Forge API returns one of server error codes" in {
-    val expectedError = Error.OneForgeLookupRateError("Unable to retrieve rate", 500)
+    val expectedError = Error.OneForgeLookupRateError("Unable to retrieve rate", CauseError("something wrong", 500))
     val forgeApi      = stubForgeGetRateAPI(currencyPair, InternalServerError("something wrong"))
     val result        = new OneForgeLive[IO](config, Client.fromHttpApp[IO](forgeApi)).getRates(currencyPair).unsafeRunSync()
 
@@ -83,7 +83,7 @@ class OneForgeLiveTest extends FlatSpec with Matchers with Http4sDsl[IO] {
   }
 
   it should "return OneForgeLookupClientError if Forge API returns one of client error codes" in {
-    val expectedError = Error.OneForgeLookupRateError("Unable to retrieve rate", 400)
+    val expectedError = Error.OneForgeLookupRateError("Unable to retrieve rate", CauseError("something wrong", 400))
     val forgeApi      = stubForgeGetRateAPI(currencyPair, BadRequest("something wrong"))
     val result        = new OneForgeLive[IO](config, Client.fromHttpApp[IO](forgeApi)).getRates(currencyPair).unsafeRunSync()
 
@@ -98,9 +98,9 @@ class OneForgeLiveTest extends FlatSpec with Matchers with Http4sDsl[IO] {
     result.isRight should be(true)
     result.right.get should be(expectedQuota)
   }
-  it should "return OneForgeLookupUnknownError  if Forge API responds with 200 but with error in JSON" in {
+  it should "return OneForgeQuotaError  if Forge API responds with 200 but with error in JSON" in {
     val apiErrMsg         = "API Key Not Valid. Please go to 1forge.com to get an API key"
-    val expectedError     = Error.OneForgeQuotaError("Unable to retrieve quota", 200)
+    val expectedError     = Error.OneForgeQuotaError("Unable to retrieve quota", CauseError(apiErrMsg, 200))
     val forgeRateResponse = ForgeErrorMessageResponse(error = true, apiErrMsg)
     val forgeApi          = stubForgeGetQuotaAPI(Ok(forgeRateResponse.asJson))
     val result            = new OneForgeLive[IO](config, Client.fromHttpApp[IO](forgeApi)).getQuota.unsafeRunSync()
@@ -109,7 +109,7 @@ class OneForgeLiveTest extends FlatSpec with Matchers with Http4sDsl[IO] {
     result.left.get should be(expectedError)
   }
   it should "return OneForgeLookupServerError if Forge API returns one of server error codes" in {
-    val expectedError = Error.OneForgeQuotaError("Unable to retrieve quota", 500)
+    val expectedError = Error.OneForgeQuotaError("Unable to retrieve quota", CauseError("something wrong", 500))
     val forgeApi      = stubForgeGetQuotaAPI(InternalServerError("something wrong"))
     val result        = new OneForgeLive[IO](config, Client.fromHttpApp[IO](forgeApi)).getQuota.unsafeRunSync()
 
@@ -117,7 +117,7 @@ class OneForgeLiveTest extends FlatSpec with Matchers with Http4sDsl[IO] {
     result.left.get should be(expectedError)
   }
   it should "return OneForgeLookupClientError if Forge API returns one of client error codes" in {
-    val expectedError = Error.OneForgeQuotaError("Unable to retrieve quota", 400)
+    val expectedError = Error.OneForgeQuotaError("Unable to retrieve quota", CauseError("something wrong", 400))
     val forgeApi      = stubForgeGetQuotaAPI(BadRequest("something wrong"))
     val result        = new OneForgeLive[IO](config, Client.fromHttpApp[IO](forgeApi)).getQuota.unsafeRunSync()
 

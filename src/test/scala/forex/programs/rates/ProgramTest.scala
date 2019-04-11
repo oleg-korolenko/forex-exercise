@@ -6,7 +6,7 @@ import cats.syntax.applicative._
 import cats.syntax.either._
 import forex.domain._
 import forex.programs.rates.Protocol.GetRatesRequest
-import forex.services.rates.errors.Error
+import forex.services.rates.errors.{ CauseError, Error }
 import org.scalatest.{ FlatSpec, Matchers }
 
 /**
@@ -38,7 +38,7 @@ class ProgramTest extends FlatSpec with Matchers {
 
     val pair                 = Rate.Pair(Currency.USD, Currency.EUR)
     val errMessage           = "Can't get Rate"
-    val rateServiceError     = Error.OneForgeLookupRateError(errMessage, 500)
+    val rateServiceError     = Error.OneForgeLookupRateError("Unable to retrieve rate", CauseError(errMessage, 500))
     val expectedProgramError = errors.toProgramError(rateServiceError)
 
     val stubQuotaResp = Quota(100, 1000, 900, 10).asRight[Error].pure[IO]
@@ -59,7 +59,7 @@ class ProgramTest extends FlatSpec with Matchers {
     val pair = Rate.Pair(Currency.USD, Currency.EUR)
     val now  = Timestamp.now
 
-    val rateServiceQuotaError = Error.OneForgeQuotaError("Can't get Quota", 500)
+    val rateServiceQuotaError = Error.OneForgeQuotaError("Unable to retrieve quota", CauseError("something wrong", 500))
     val expectedProgramError  = errors.toProgramError(rateServiceQuotaError)
 
     val stubQuotaResp = rateServiceQuotaError.asLeft[Quota].pure[IO]
