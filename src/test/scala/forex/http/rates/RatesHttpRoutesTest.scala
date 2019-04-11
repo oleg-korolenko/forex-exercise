@@ -10,7 +10,7 @@ import forex.programs.rates.errors
 import io.circe.Json
 import io.circe.syntax._
 import org.http4s.dsl.Http4sDsl
-import org.http4s.{ EntityDecoder, Method, ParseFailure, QueryParamDecoder, Request, Response, Status, Uri }
+import org.http4s.{ EntityDecoder, Method, Request, Response, Status, Uri }
 import org.scalatest.{ Assertion, FlatSpec, Matchers }
 import cats.syntax.applicative._
 import cats.syntax.either._
