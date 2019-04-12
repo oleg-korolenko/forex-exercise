@@ -6,6 +6,7 @@ import forex.config._
 import fs2.Stream
 import org.http4s.client.blaze.BlazeClientBuilder
 import org.http4s.server.blaze.BlazeServerBuilder
+import org.http4s.server.middleware.CORS
 
 import scala.concurrent.ExecutionContext
 
@@ -25,7 +26,7 @@ class Application[F[_]: ConcurrentEffect: Timer] {
           module = new Module[F](config, client)
           _ <- BlazeServerBuilder[F]
                 .bindHttp(config.http.port, config.http.host)
-                .withHttpApp(module.httpApp)
+                .withHttpApp(CORS(module.httpApp))
                 .serve
         } yield ()
 
