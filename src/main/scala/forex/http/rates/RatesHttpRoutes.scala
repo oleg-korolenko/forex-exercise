@@ -10,6 +10,8 @@ import org.http4s.HttpRoutes
 import org.http4s.dsl.Http4sDsl
 import org.http4s.server.Router
 import io.circe.syntax._
+import Converters.ConverterToApiErrorSyntax._
+
 class RatesHttpRoutes[F[_]: Sync](rates: RatesProgram[F]) extends Http4sDsl[F] {
 
   import Converters._, QueryParams._, Protocol._
@@ -19,10 +21,10 @@ class RatesHttpRoutes[F[_]: Sync](rates: RatesProgram[F]) extends Http4sDsl[F] {
   private val httpRoutes: HttpRoutes[F] = HttpRoutes.of[F] {
     case GET -> Root :? FromQueryParam(fromValidated) +& ToQueryParam(toValidated) =>
       fromValidated.fold(
-        _ => BadRequest("Unable to parse argument [from]".asJson),
+        _ => BadRequest("Unable to parse argument [from]".asGetApiError.asJson),
         from =>
           toValidated.fold(
-            _ => BadRequest("Unable to parse argument [to]".asJson),
+            _ => BadRequest("Unable to parse argument [to]".asGetApiError.asJson),
             to =>
               rates
                 .get(RatesProgramProtocol.GetRatesRequest(from, to))

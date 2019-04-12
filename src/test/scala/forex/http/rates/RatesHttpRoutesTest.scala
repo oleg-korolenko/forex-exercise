@@ -14,6 +14,7 @@ import org.http4s.{ EntityDecoder, Method, Request, Response, Status, Uri }
 import org.scalatest.{ Assertion, FlatSpec, Matchers }
 import cats.syntax.applicative._
 import cats.syntax.either._
+import forex.http.rates.Converters.ConverterToApiErrorSyntax._
 import forex.http.rates.Converters._
 import org.http4s.circe._
 
@@ -54,7 +55,7 @@ class RatesHttpRoutesTest extends FlatSpec with Matchers with Http4sDsl[IO] {
       Request(method = Method.GET, uri = Uri.uri("/rates?from=UUU&to=EUR"))
     )
 
-    val expectedMessage = "Unable to parse argument [from]".asJson
+    val expectedMessage = "Unable to parse argument [from]".asGetApiError.asJson
 
     check[Json](response, Status.BadRequest, Some(expectedMessage))
   }
@@ -72,7 +73,7 @@ class RatesHttpRoutesTest extends FlatSpec with Matchers with Http4sDsl[IO] {
       Request(method = Method.GET, uri = Uri.uri("/rates?from=USD&to=EU"))
     )
 
-    val expectedMsg = "Unable to parse argument [to]".asJson
+    val expectedMsg = "Unable to parse argument [to]".asGetApiError.asJson
 
     check[Json](response, Status.BadRequest, Some(expectedMsg))
   }
@@ -112,7 +113,7 @@ class RatesHttpRoutesTest extends FlatSpec with Matchers with Http4sDsl[IO] {
   }
 
   it should "return 403  if RatesProgram returns that quota is spent" in {
-    val error = errors.Error.QuotaLimit("error")
+    val error: errors.Error = errors.Error.QuotaLimit("error")
     val ratesProgram = new RatesProgram[IO] {
       override def get(request: GetRatesRequest): IO[Either[errors.Error, Rate]] =
         error.asLeft[Rate].pure[IO]
@@ -130,7 +131,7 @@ class RatesHttpRoutesTest extends FlatSpec with Matchers with Http4sDsl[IO] {
 
   it should "return 500  if RatesProgram fails to check the quota" in {
 
-    val error = errors.Error.QuotaLookupFailed("error")
+    val error: errors.Error = errors.Error.QuotaLookupFailed("error")
     val ratesProgram = new RatesProgram[IO] {
       override def get(request: GetRatesRequest): IO[Either[errors.Error, Rate]] =
         error.asLeft[Rate].pure[IO]

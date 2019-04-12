@@ -16,9 +16,31 @@ object Converters {
       )
   }
 
+  private[rates] trait ConverterToApiError[T] {
+    def asGetApiError(toConvert: T): GetApiError
+  }
+
+  private[rates] implicit val programErrorAsGetApiError = new ConverterToApiError[Error] {
+    override def asGetApiError(error: Error): GetApiError = GetApiError(error.msg)
+  }
+
+  private[rates] implicit val stringAsGetApiError = new ConverterToApiError[String] {
+    override def asGetApiError(toConvert: String): GetApiError = GetApiError(toConvert)
+  }
+
+  object ConverterToApiErrorSyntax {
+
+    private[rates] implicit class ConverterToApiErrorOps[T](toConvert: T) {
+
+      def asGetApiError(implicit converter: ConverterToApiError[T]): GetApiError =
+        converter.asGetApiError(toConvert)
+    }
+
+  }
+  /*
   private[rates] implicit class GetApiErrorOps(val error: Error) extends AnyVal {
     def asGetApiError: GetApiError =
       GetApiError(error.msg)
-  }
+  }*/
 
 }
