@@ -4,7 +4,7 @@ import cats.effect.IO
 import forex.domain.Currency._
 import forex.domain._
 import forex.http.rates.Protocol._
-import forex.programs.RatesProgram
+import forex.programs.{ ProgramError, RatesProgram }
 import forex.programs.rates.Protocol.GetRatesRequest
 import forex.programs.rates.errors
 import io.circe.Json
@@ -28,8 +28,8 @@ class RatesHttpRoutesTest extends FlatSpec with Matchers with Http4sDsl[IO] {
     val pair = Rate.Pair(USD, EUR)
     val rate = Rate(pair, Price(0.9d), Timestamp.now)
     val ratesProgram = new RatesProgram[IO] {
-      override def get(request: GetRatesRequest): IO[Either[errors.Error, Rate]] =
-        rate.asRight[errors.Error].pure[IO]
+      override def get(request: GetRatesRequest): IO[Either[ProgramError, Rate]] =
+        rate.asRight[ProgramError].pure[IO]
     }
     val rateHttp = new RatesHttpRoutes[IO](ratesProgram).routes
 
@@ -46,8 +46,8 @@ class RatesHttpRoutesTest extends FlatSpec with Matchers with Http4sDsl[IO] {
     val pair = Rate.Pair(USD, EUR)
 
     val ratesProgram = new RatesProgram[IO] {
-      override def get(request: GetRatesRequest): IO[Either[errors.Error, Rate]] =
-        Rate(pair, Price(0.9d), Timestamp.now).asRight[errors.Error].pure[IO]
+      override def get(request: GetRatesRequest): IO[Either[ProgramError, Rate]] =
+        Rate(pair, Price(0.9d), Timestamp.now).asRight[ProgramError].pure[IO]
     }
     val rateHttp = new RatesHttpRoutes[IO](ratesProgram).routes
 
@@ -64,8 +64,8 @@ class RatesHttpRoutesTest extends FlatSpec with Matchers with Http4sDsl[IO] {
     val pair = Rate.Pair(USD, EUR)
     val rate = Rate(pair, Price(0.9d), Timestamp.now)
     val ratesProgram = new RatesProgram[IO] {
-      override def get(request: GetRatesRequest): IO[Either[errors.Error, Rate]] =
-        rate.asRight[errors.Error].pure[IO]
+      override def get(request: GetRatesRequest): IO[Either[ProgramError, Rate]] =
+        rate.asRight[ProgramError].pure[IO]
     }
     val rateHttp = new RatesHttpRoutes[IO](ratesProgram).routes
 
@@ -79,9 +79,9 @@ class RatesHttpRoutesTest extends FlatSpec with Matchers with Http4sDsl[IO] {
   }
 
   it should "return 500  if RatesProgram fails to get the rate" in {
-    val error: errors.Error = errors.Error.RateLookupFailed("error")
+    val error: ProgramError = errors.Error.RateLookupFailed("error")
     val ratesProgram = new RatesProgram[IO] {
-      override def get(request: GetRatesRequest): IO[Either[errors.Error, Rate]] =
+      override def get(request: GetRatesRequest): IO[Either[ProgramError, Rate]] =
         error.asLeft[Rate].pure[IO]
     }
     val rateHttp = new RatesHttpRoutes[IO](ratesProgram).routes
@@ -96,9 +96,9 @@ class RatesHttpRoutesTest extends FlatSpec with Matchers with Http4sDsl[IO] {
   }
 
   it should "return 202  if RatesProgram gets the rate but it's already out-of-date" in {
-    val error: errors.Error = errors.Error.RateIsTooOldLookupFailed("error")
+    val error: ProgramError = errors.Error.RateIsTooOldLookupFailed("error")
     val ratesProgram = new RatesProgram[IO] {
-      override def get(request: GetRatesRequest): IO[Either[errors.Error, Rate]] =
+      override def get(request: GetRatesRequest): IO[Either[ProgramError, Rate]] =
         error.asLeft[Rate].pure[IO]
     }
     val rateHttp = new RatesHttpRoutes[IO](ratesProgram).routes
@@ -113,9 +113,9 @@ class RatesHttpRoutesTest extends FlatSpec with Matchers with Http4sDsl[IO] {
   }
 
   it should "return 403  if RatesProgram returns that quota is spent" in {
-    val error: errors.Error = errors.Error.QuotaLimit("error")
+    val error: ProgramError = errors.Error.QuotaLimit("error")
     val ratesProgram = new RatesProgram[IO] {
-      override def get(request: GetRatesRequest): IO[Either[errors.Error, Rate]] =
+      override def get(request: GetRatesRequest): IO[Either[ProgramError, Rate]] =
         error.asLeft[Rate].pure[IO]
     }
     val rateHttp = new RatesHttpRoutes[IO](ratesProgram).routes
@@ -131,9 +131,9 @@ class RatesHttpRoutesTest extends FlatSpec with Matchers with Http4sDsl[IO] {
 
   it should "return 500  if RatesProgram fails to check the quota" in {
 
-    val error: errors.Error = errors.Error.QuotaLookupFailed("error")
+    val error: ProgramError = errors.Error.QuotaLookupFailed("error")
     val ratesProgram = new RatesProgram[IO] {
-      override def get(request: GetRatesRequest): IO[Either[errors.Error, Rate]] =
+      override def get(request: GetRatesRequest): IO[Either[ProgramError, Rate]] =
         error.asLeft[Rate].pure[IO]
     }
     val rateHttp = new RatesHttpRoutes[IO](ratesProgram).routes
