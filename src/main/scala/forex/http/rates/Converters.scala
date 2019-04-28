@@ -37,10 +37,5 @@ object Converters {
     }
 
   }
-  /*
-  private[rates] implicit class GetApiErrorOps(val error: Error) extends AnyVal {
-    def asGetApiError: GetApiError =
-      GetApiError(error.msg)
-  }*/
 
 }

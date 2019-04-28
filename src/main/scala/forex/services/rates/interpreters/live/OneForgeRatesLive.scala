@@ -15,8 +15,8 @@ import org.http4s.client.Client
 class OneForgeRatesLive[F[_]: Sync](config: OneForgeConfig, client: Client[F]) extends Algebra[F] {
 
   // we can stop directly the server since this service will not work without the correct base URL
-  private val baseUri      = Uri.fromString(s"${config.host.show}/${config.version.show}").toOption.get
-  private val isRateTooOld = Timestamp.isOlderThan(config.oldRateThresholdInSecs)
+  private val baseUri = Uri.fromString(s"${config.host.show}/${config.version.show}").toOption.get
+
   override def getRates(pair: Rate.Pair): F[RateError Either Rate] = {
 
     val uriToCall = baseUri / "convert" +? ("from", pair.from) +? ("to", pair.to) +? ("api_key", config.apiKey) +? ("quantity", 1)
@@ -29,10 +29,7 @@ class OneForgeRatesLive[F[_]: Sync](config: OneForgeConfig, client: Client[F]) e
             .flatMap(
               r => {
                 val ts = Timestamp.fromUtcTimestamp(r.timestamp)
-                if (isRateTooOld(ts)) {
-                  val err: RateError = RateError.OneForgeLookupRateIsToolOld(s"Rate is too old: ${ts.value.toString}")
-                  err.asLeft[Rate].pure[F]
-                } else Rate(pair, Price(r.value), ts).asRight[RateError].pure[F]
+                Rate(pair, Price(r.value), ts).asRight[RateError].pure[F]
               }
             )
             // could be still an error thanks to the Forge API (f.i missing API key)

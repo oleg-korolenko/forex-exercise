@@ -4,7 +4,8 @@ import scala.concurrent.duration.FiniteDuration
 
 case class ApplicationConfig(
     http: HttpConfig,
-    forge: OneForgeConfig
+    forge: OneForgeConfig,
+    cache: CacheConfig
 )
 
 case class HttpConfig(
@@ -16,6 +17,9 @@ case class HttpConfig(
 case class OneForgeConfig(
     host: String,
     version: String,
-    oldRateThresholdInSecs: Int,
     apiKey: String
+)
+
+case class CacheConfig(
+    ttl: Int
 )

@@ -1,12 +1,13 @@
 package forex
 
 import cats.effect._
+import cats.effect.concurrent.Ref
 import cats.implicits._
 import forex.config._
+import forex.domain.{ Rate, Timestamp }
 import fs2.Stream
 import org.http4s.client.blaze.BlazeClientBuilder
 import org.http4s.server.blaze.BlazeServerBuilder
-import org.http4s.server.middleware.CORS
 
 import scala.concurrent.ExecutionContext
 
@@ -19,19 +20,23 @@ object Main extends IOApp {
 class Application[F[_]: ConcurrentEffect: Timer] {
 
   val server: F[Unit] = {
-    BlazeClientBuilder[F](ExecutionContext.global).resource.use[Unit] { client =>
-      {
-        val stream: Stream[F, Unit] = for {
-          config <- Config.stream("app")
-          module = new Module[F](config, client)
-          _ <- BlazeServerBuilder[F]
-                .bindHttp(config.http.port, config.http.host)
-                .withHttpApp(CORS(module.httpApp))
-                .serve
-        } yield ()
 
-        stream.compile.drain
-      }
+    Ref.of[F, Map[Rate.Pair, (Rate, Timestamp)]](Map.empty).flatMap {
+      cache: Ref[F, Map[Rate.Pair, (Rate, Timestamp)]] =>
+        BlazeClientBuilder[F](ExecutionContext.global).resource.use[Unit] { client =>
+          {
+            val stream: Stream[F, Unit] = for {
+              config <- Config.stream("app")
+              module = new Module[F](config, client, cache)
+              _ <- BlazeServerBuilder[F]
+                    .bindHttp(config.http.port, config.http.host)
+                    .withHttpApp(module.httpApp)
+                    .serve
+            } yield ()
+
+            stream.compile.drain
+          }
+        }
     }
   }
 }

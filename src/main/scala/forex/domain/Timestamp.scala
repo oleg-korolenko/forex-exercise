@@ -11,7 +11,7 @@ object Timestamp {
 
   def fromUtcTimestamp(ts: Long) = Timestamp(Instant.ofEpochSecond(ts).atZone(ZoneId.systemDefault()).toOffsetDateTime)
 
-  def isOlderThan(thresholdInSecs: Int) =
+  def isOlderThan(thresholdInSecs: Int): Timestamp => Boolean =
     (tsToCheck: Timestamp) => Timestamp.now.value.minus(thresholdInSecs, ChronoUnit.SECONDS).isAfter(tsToCheck.value)
 
 }

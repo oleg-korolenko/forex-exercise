@@ -20,9 +20,6 @@ object errors {
     case RatesServiceError.OneForgeLookupRateError(msg, _) =>
       Error.RateLookupFailed(msg)
 
-    case RatesServiceError.OneForgeLookupRateIsToolOld(msg) =>
-      Error.RateIsTooOldLookupFailed(msg)
-
   }
   def quotaErrorToProgramError(error: QuotaServiceError): Error = error match {
     case QuotaServiceError.OneForgeQuotaError(msg, _) =>

@@ -21,7 +21,7 @@ import org.scalatest.{ FlatSpec, Matchers }
   */
 class OneForgeRatesLiveTest extends FlatSpec with Matchers with Http4sDsl[IO] {
 
-  val config = OneForgeConfig("http://myservice", "v1", 5, "secret")
+  val config = OneForgeConfig("http://myservice", "v1", "secret")
 
   val currencyPair = Rate.Pair(Currency.USD, Currency.EUR)
 
@@ -47,29 +47,6 @@ class OneForgeRatesLiveTest extends FlatSpec with Matchers with Http4sDsl[IO] {
     val expectedError     = RateError.OneForgeLookupRateError("Unable to retrieve rate", CauseError(apiErrMsg, 200))
     val forgeRateResponse = ForgeRateErrorResponse(error = true, apiErrMsg)
     val forgeApi          = stubForgeGetRateAPI(currencyPair, Ok(forgeRateResponse.asJson))
-    val result =
-      new OneForgeRatesLive[IO](config, Client.fromHttpApp[IO](forgeApi)).getRates(currencyPair).unsafeRunSync()
-
-    result.isLeft should be(true)
-    result.left.get should be(expectedError)
-  }
-
-  it should "return OneForgeLookupRateIsToolOld if Forge API returns a Rate older than defined threshold" in {
-    val currentTs = OffsetDateTime.now.toEpochSecond
-    val price     = Price(0.9d)
-
-    // ts older than NOW - THRESHOLD
-    val olderTs = currentTs - config.oldRateThresholdInSecs - 5
-
-    val forgeRateResponse = ForgeRateSuccessResponse(
-      price.value.doubleValue(),
-      "conversion text",
-      olderTs
-    )
-    val apiErrMsg     = s"Rate is too old: ${Timestamp.fromUtcTimestamp(olderTs).value.toString}"
-    val expectedError = RateError.OneForgeLookupRateIsToolOld(apiErrMsg)
-
-    val forgeApi = stubForgeGetRateAPI(currencyPair, Ok(forgeRateResponse.asJson))
     val result =
       new OneForgeRatesLive[IO](config, Client.fromHttpApp[IO](forgeApi)).getRates(currencyPair).unsafeRunSync()
 

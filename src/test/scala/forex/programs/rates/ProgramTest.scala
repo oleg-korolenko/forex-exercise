@@ -2,8 +2,7 @@ package forex.programs.rates
 
 import cats.Applicative
 import cats.effect.IO
-import cats.syntax.applicative._
-import cats.syntax.either._
+import cats.implicits._
 import forex.domain._
 import forex.programs.rates.Protocol.GetRatesRequest
 import forex.services.errors.CauseError
@@ -21,19 +20,24 @@ class ProgramTest extends FlatSpec with Matchers {
     val pair = Rate.Pair(Currency.USD, Currency.EUR)
     val now  = Timestamp.now
 
-    val stubRateResp  = Rate(pair, Price(BigDecimal(100)), now).asRight[RateError].pure[IO]
+    val rate          = Rate(pair, Price(BigDecimal(100)), now)
+    val stubRateResp  = rate.asRight[RateError].pure[IO]
     val stubQuotaResp = Quota(100, 1000, 900, 10).asRight[QuotaError].pure[IO]
+    val cacheState    = Map.empty[Rate.Pair, Rate]
 
     val ratesService = createRatesServicesInterpreter(stubRateResp)
     val quotaService = createQuotaServicesInterpreter(stubQuotaResp)
-    val program      = Program[IO](ratesService, quotaService)
+    val cacheService = createCacheServicesInterpreter(cacheState)
+    val program      = Program[IO](ratesService, quotaService, cacheService)
 
     val result = program.get(GetRatesRequest(pair.from, pair.to)).unsafeRunSync()
 
     val expectedRate = Rate(pair, Price(BigDecimal(100)), now)
+    val fromCache    = cacheService.get(pair).unsafeRunSync()
 
     result.isRight should be(true)
     result.right.get should be(expectedRate)
+    fromCache should be(Some(rate))
 
   }
 
@@ -46,16 +50,20 @@ class ProgramTest extends FlatSpec with Matchers {
 
     val stubQuotaResp = Quota(100, 1000, 900, 10).asRight[QuotaError].pure[IO]
     val stubRateResp  = rateServiceError.asLeft[Rate].pure[IO]
+    val cacheState    = Map.empty[Rate.Pair, Rate]
 
     val ratesService = createRatesServicesInterpreter(stubRateResp)
     val quotaService = createQuotaServicesInterpreter(stubQuotaResp)
-    val program      = Program[IO](ratesService, quotaService)
+    val cacheService = createCacheServicesInterpreter(cacheState)
 
-    val result = program.get(GetRatesRequest(pair.from, pair.to)).unsafeRunSync()
+    val program = Program[IO](ratesService, quotaService, cacheService)
+
+    val result    = program.get(GetRatesRequest(pair.from, pair.to)).unsafeRunSync()
+    val fromCache = cacheService.get(pair).unsafeRunSync()
 
     result.isLeft should be(true)
     result.left.get should be(expectedProgramError)
-
+    fromCache should be(None)
   }
 
   it should "return program QuotaLookupFailed if RateService doesn't return quote" in {
@@ -69,16 +77,20 @@ class ProgramTest extends FlatSpec with Matchers {
 
     val stubQuotaResp = quotaError.asLeft[Quota].pure[IO]
     val stubRateResp  = Rate(pair, Price(BigDecimal(100)), now).asRight[RateError].pure[IO]
+    val cacheState    = Map.empty[Rate.Pair, Rate]
 
     val ratesService = createRatesServicesInterpreter(stubRateResp)
     val quotaService = createQuotaServicesInterpreter(stubQuotaResp)
-    val program      = Program[IO](ratesService, quotaService)
+    val cacheService = createCacheServicesInterpreter(cacheState)
 
-    val result = program.get(GetRatesRequest(pair.from, pair.to)).unsafeRunSync()
+    val program = Program[IO](ratesService, quotaService, cacheService)
+
+    val result    = program.get(GetRatesRequest(pair.from, pair.to)).unsafeRunSync()
+    val fromCache = cacheService.get(pair).unsafeRunSync()
 
     result.isLeft should be(true)
     result.left.get should be(expectedProgramError)
-
+    fromCache should be(None)
   }
 
   it should "return program QuotaLimit if returned quota indicates that of don't have requests left" in {
@@ -92,15 +104,20 @@ class ProgramTest extends FlatSpec with Matchers {
 
     val stubQuotaResp = quota.asRight[QuotaError].pure[IO]
     val stubRateResp  = Rate(pair, Price(BigDecimal(100)), now).asRight[RateError].pure[IO]
+    val cacheState    = Map.empty[Rate.Pair, Rate]
 
     val ratesService = createRatesServicesInterpreter(stubRateResp)
     val quotaService = createQuotaServicesInterpreter(stubQuotaResp)
-    val program      = Program[IO](ratesService, quotaService)
+    val cacheService = createCacheServicesInterpreter(cacheState)
 
-    val result = program.get(GetRatesRequest(pair.from, pair.to)).unsafeRunSync()
+    val program = Program[IO](ratesService, quotaService, cacheService)
+
+    val result    = program.get(GetRatesRequest(pair.from, pair.to)).unsafeRunSync()
+    val fromCache = cacheService.get(pair).unsafeRunSync()
 
     result.isLeft should be(true)
     result.left.get should be(expectedProgramError)
+    fromCache should be(None)
   }
 
   private def createRatesServicesInterpreter(stubRateResp: IO[RateError Either Rate]) =
@@ -108,6 +125,9 @@ class ProgramTest extends FlatSpec with Matchers {
 
   private def createQuotaServicesInterpreter(stubQuotaResp: IO[Either[QuotaError, Quota]]) =
     new QuotaServiceStubInterpreter[IO](stubQuotaResp)
+
+  private def createCacheServicesInterpreter(cacheState: Map[Rate.Pair, Rate]) =
+    new CacheServiceStubInterpreter[IO](cacheState)
 
 }
 
@@ -121,4 +141,13 @@ class QuotaServiceStubInterpreter[F[_]: Applicative](stubQuota: F[Either[QuotaEr
     extends forex.services.quota.Algebra[F] {
 
   override def getQuota: F[Either[QuotaError, Quota]] = stubQuota
+}
+
+class CacheServiceStubInterpreter[F[_]: Applicative](var state: Map[Rate.Pair, Rate])
+    extends forex.services.cache.Algebra[F, Rate.Pair, Rate] {
+  override def set(key: Rate.Pair, obj: Rate): F[Unit] = {
+    state = state.updated(key, obj)
+    ().pure[F]
+  }
+  override def get(key: Rate.Pair): F[Option[Rate]] = state.get(key).pure[F]
 }

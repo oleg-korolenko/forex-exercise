@@ -17,7 +17,7 @@ import org.scalatest.{ FlatSpec, Matchers }
   * Created by okorolenko on 2019-04-11.
   */
 class OneForgeQuotaLiveTest extends FlatSpec with Matchers with Http4sDsl[IO] {
-  val config = OneForgeConfig("http://myservice", "v1", 5, "secret")
+  val config = OneForgeConfig("http://myservice", "v1", "secret")
 
   "getQuota" should "return Quota if Forge API responds correctly" in {
     val expectedQuota = Quota(1, 10, 9, 12)
