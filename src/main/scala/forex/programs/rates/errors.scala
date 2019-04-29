@@ -10,7 +10,6 @@ object errors {
   }
   object Error {
     final case class RateLookupFailed(msg: String) extends Error
-    final case class RateIsTooOldLookupFailed(msg: String) extends Error
     final case class QuotaLookupFailed(msg: String) extends Error
     final case class QuotaLimit(msg: String) extends Error
   }

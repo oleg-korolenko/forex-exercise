@@ -95,23 +95,6 @@ class RatesHttpRoutesTest extends FlatSpec with Matchers with Http4sDsl[IO] {
     check[Json](response, Status.InternalServerError, Some(expectedJson))
   }
 
-  it should "return 202  if RatesProgram gets the rate but it's already out-of-date" in {
-    val error: ProgramError = errors.Error.RateIsTooOldLookupFailed("error")
-    val ratesProgram = new RatesProgram[IO] {
-      override def get(request: GetRatesRequest): IO[Either[ProgramError, Rate]] =
-        error.asLeft[Rate].pure[IO]
-    }
-    val rateHttp = new RatesHttpRoutes[IO](ratesProgram).routes
-
-    val response: IO[Response[IO]] = rateHttp.orNotFound.run(
-      Request(method = Method.GET, uri = Uri.uri("/rates?from=USD&to=EUR"))
-    )
-
-    val expectedJson = error.asGetApiError.asJson
-
-    check[Json](response, Status.Accepted, Some(expectedJson))
-  }
-
   it should "return 403  if RatesProgram returns that quota is spent" in {
     val error: ProgramError = errors.Error.QuotaLimit("error")
     val ratesProgram = new RatesProgram[IO] {

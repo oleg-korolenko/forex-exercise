@@ -4,7 +4,7 @@ package rates
 import cats.effect.Sync
 import cats.syntax.flatMap._
 import forex.programs.RatesProgram
-import forex.programs.rates.errors.Error.{ QuotaLimit, QuotaLookupFailed, RateIsTooOldLookupFailed, RateLookupFailed }
+import forex.programs.rates.errors.Error.{ QuotaLimit, QuotaLookupFailed, RateLookupFailed }
 import forex.programs.rates.{ Protocol => RatesProgramProtocol }
 import org.http4s.HttpRoutes
 import org.http4s.dsl.Http4sDsl
@@ -34,7 +34,6 @@ class RatesHttpRoutes[F[_]: Sync](rates: RatesProgram[F]) extends Http4sDsl[F] {
                     err match {
                       case RateLookupFailed(_) | QuotaLookupFailed(_) => InternalServerError(err.asGetApiError)
                       case QuotaLimit(_)                              => Forbidden(err.asGetApiError)
-                      case RateIsTooOldLookupFailed(_)                => Accepted(err.asGetApiError)
                     }
               }
         )
